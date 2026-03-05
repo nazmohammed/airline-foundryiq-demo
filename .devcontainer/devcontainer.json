@@ -1,0 +1,30 @@
+{
+  "name": "airline-foundryiq-demo",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {},
+    "ghcr.io/azure/azure-dev/azd:latest": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "18" }
+  },
+  "postCreateCommand": "pip install -r requirements-dev.txt && cd app/frontend && npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.azure-dev"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.languageServer": "Pylance",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
+      }
+    }
+  },
+  "forwardPorts": [8000, 5173]
+}

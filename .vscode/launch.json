@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/app/backend",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Agent: Orchestrator CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/backend/agents/orchestrator.py",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Agent: Customer Service",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/backend/agents/customer_service_agent.py",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Agent: Operations",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/backend/agents/operations_agent.py",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Agent: Loyalty",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/backend/agents/loyalty_agent.py",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-v"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

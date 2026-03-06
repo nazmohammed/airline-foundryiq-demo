@@ -7,11 +7,11 @@ baggage issues, seat upgrades, and general travel assistance for Zava Airlines.
 import asyncio
 import os
 from azure.identity.aio import DefaultAzureCredential
-from agent_framework import ChatAgent, ChatMessage, Role
+from agent_framework import Agent
 from agent_framework.azure import AzureAIAgentClient, AzureAISearchContextProvider
 
-SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT", "https://srch-zava-airlines.search.windows.net")
-PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "https://foundry-zava-airlines.services.ai.azure.com/api/projects/proj1-zava-airlines")
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT", "https://<your-search-service>.search.windows.net")
+PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "https://<your-ai-resource>.services.ai.azure.com/api/projects/<your-project>")
 MODEL = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")
 
 CUSTOMER_SERVICE_INSTRUCTIONS = """You are the Customer Service Agent for Zava Airlines.
@@ -59,14 +59,13 @@ async def run_customer_service_agent(query: str) -> str:
             knowledge_base_output_mode="answer_synthesis",
         ) as kb_context,
     ):
-        agent = ChatAgent(
-            chat_client=client,
-            context_provider=kb_context,
+        agent = Agent(
+            client=client,
+            context_providers=[kb_context],
             instructions=CUSTOMER_SERVICE_INSTRUCTIONS,
         )
 
-        message = ChatMessage(role=Role.USER, text=query)
-        response = await agent.run(message)
+        response = await agent.run(query)
         return response.text
 
     await credential.close()

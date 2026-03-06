@@ -13,13 +13,17 @@ attached to kb2-operations, enabling real-time situational awareness.
 import asyncio
 import os
 from azure.identity.aio import DefaultAzureCredential
-from agent_framework import ChatAgent, ChatMessage, Role
-from agent_framework.azure import AzureAIAgentClient, AzureAISearchContextProvider
+from agent_framework import Agent
+from agent_framework.azure import AzureAIAgentClient, AzureAISearchContextProvider, AzureOpenAIChatClient
 
 # Configuration
-SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT", "https://srch-zava-airlines.search.windows.net")
-PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "https://foundry-zava-airlines.services.ai.azure.com/api/projects/proj1-zava-airlines")
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT", "https://<your-search-service>.search.windows.net")
+PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "https://<your-ai-resource>.services.ai.azure.com/api/projects/<your-project>")
 MODEL = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")
+
+# Derive the OpenAI-compatible endpoint from the project endpoint for stateless chat
+# e.g. https://aifoundrynaz.services.ai.azure.com/api/projects/myaiprojects -> https://aifoundrynaz.services.ai.azure.com/
+OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "/".join(PROJECT_ENDPOINT.split("/")[:3]) + "/")
 
 # Agent instructions
 from .customer_service_agent import CUSTOMER_SERVICE_INSTRUCTIONS
@@ -36,10 +40,9 @@ Respond with ONLY one of these agent names:
 Just respond with the agent name, nothing else."""
 
 
-async def route_query(client: ChatAgent, query: str) -> str:
+async def route_query(client: Agent, query: str) -> str:
     """Route a query to the appropriate specialist."""
-    message = ChatMessage(role=Role.USER, text=query)
-    response = await client.run(message)
+    response = await client.run(query)
     route = response.text.strip().lower()
 
     # Normalize routing
@@ -58,12 +61,19 @@ async def run_orchestrator():
 
     credential = DefaultAzureCredential()
 
+    # Stateless client for router (AzureOpenAIChatClient avoids server-side agent state sharing)
+    router_client = AzureOpenAIChatClient(
+        endpoint=OPENAI_ENDPOINT,
+        deployment_name=MODEL,
+        credential=credential,
+    )
+
     async with (
         AzureAIAgentClient(
             project_endpoint=PROJECT_ENDPOINT,
             model_deployment_name=MODEL,
             credential=credential,
-        ) as client,
+        ) as specialist_client,
         AzureAISearchContextProvider(
             endpoint=SEARCH_ENDPOINT,
             knowledge_base_name="kb1-customer-service",
@@ -86,28 +96,28 @@ async def run_orchestrator():
             knowledge_base_output_mode="answer_synthesis",
         ) as loyalty_kb,
     ):
-        # Create router agent (no KB, just for routing decisions)
-        router = ChatAgent(
-            chat_client=client,
+        # Create router agent (stateless - no KB, just for routing decisions)
+        router = Agent(
+            client=router_client,
             instructions=ROUTER_INSTRUCTIONS,
         )
 
-        # Create specialist agents with KB grounding
-        customer_service_agent = ChatAgent(
-            chat_client=client,
-            context_provider=customer_service_kb,
+        # Create specialist agents with KB grounding (server-side agent client)
+        customer_service_agent = Agent(
+            client=specialist_client,
+            context_providers=[customer_service_kb],
             instructions=CUSTOMER_SERVICE_INSTRUCTIONS,
         )
 
-        operations_agent = ChatAgent(
-            chat_client=client,
-            context_provider=operations_kb,
+        operations_agent = Agent(
+            client=specialist_client,
+            context_providers=[operations_kb],
             instructions=OPERATIONS_INSTRUCTIONS,
         )
 
-        loyalty_agent = ChatAgent(
-            chat_client=client,
-            context_provider=loyalty_kb,
+        loyalty_agent = Agent(
+            client=specialist_client,
+            context_providers=[loyalty_kb],
             instructions=LOYALTY_INSTRUCTIONS,
         )
 
@@ -137,8 +147,7 @@ async def run_orchestrator():
 
                 # Get specialist response
                 agent = specialists[route]
-                message = ChatMessage(role=Role.USER, text=query)
-                response = await agent.run(message)
+                response = await agent.run(query)
 
                 print(f"\n💬 Response:\n{response.text}\n")
                 print("-" * 55)
@@ -166,12 +175,19 @@ async def run_single_query(query: str) -> tuple[str, str, list[dict]]:
         "loyalty": "kb3-loyalty",
     }
 
+    # Stateless client for router
+    router_client = AzureOpenAIChatClient(
+        endpoint=OPENAI_ENDPOINT,
+        deployment_name=MODEL,
+        credential=credential,
+    )
+
     async with (
         AzureAIAgentClient(
             project_endpoint=PROJECT_ENDPOINT,
             model_deployment_name=MODEL,
             credential=credential,
-        ) as client,
+        ) as specialist_client,
         AzureAISearchContextProvider(
             endpoint=SEARCH_ENDPOINT,
             knowledge_base_name="kb1-customer-service",
@@ -194,18 +210,17 @@ async def run_single_query(query: str) -> tuple[str, str, list[dict]]:
             knowledge_base_output_mode="answer_synthesis",
         ) as loyalty_kb,
     ):
-        router = ChatAgent(chat_client=client, instructions=ROUTER_INSTRUCTIONS)
+        router = Agent(client=router_client, instructions=ROUTER_INSTRUCTIONS)
 
         specialists = {
-            "customer_service": ChatAgent(chat_client=client, context_provider=customer_service_kb, instructions=CUSTOMER_SERVICE_INSTRUCTIONS),
-            "operations": ChatAgent(chat_client=client, context_provider=operations_kb, instructions=OPERATIONS_INSTRUCTIONS),
-            "loyalty": ChatAgent(chat_client=client, context_provider=loyalty_kb, instructions=LOYALTY_INSTRUCTIONS),
+            "customer_service": Agent(client=specialist_client, context_providers=[customer_service_kb], instructions=CUSTOMER_SERVICE_INSTRUCTIONS),
+            "operations": Agent(client=specialist_client, context_providers=[operations_kb], instructions=OPERATIONS_INSTRUCTIONS),
+            "loyalty": Agent(client=specialist_client, context_providers=[loyalty_kb], instructions=LOYALTY_INSTRUCTIONS),
         }
 
         route = await route_query(router, query)
         agent = specialists[route]
-        message = ChatMessage(role=Role.USER, text=query)
-        response = await agent.run(message)
+        response = await agent.run(query)
 
         # Extract sources from citations if available
         sources = []

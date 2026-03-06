@@ -1,5 +1,5 @@
-# Core
-agent-framework>=0.1.0
+# Core (agent-framework requires --pre flag: pip install --pre -r requirements-dev.txt)
+agent-framework>=1.0.0rc3
 azure-identity>=1.15.0
 azure-ai-projects>=1.0.0b7
 

@@ -9,10 +9,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/chat": "http://localhost:8000",
-      "/health": "http://localhost:8000",
-      "/agents": "http://localhost:8000",
-      "/knowledge-bases": "http://localhost:8000",
+      "/chat": "http://localhost:8001",
+      "/health": "http://localhost:8001",
+      "/agents": "http://localhost:8001",
+      "/knowledge-bases": "http://localhost:8001",
     },
   },
 });

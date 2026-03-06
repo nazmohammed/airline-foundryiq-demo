@@ -15,7 +15,9 @@ A multi-agent orchestration demo for the airline industry using **Microsoft Agen
 ## Demo
 
 <p align="center">
-  <img src="docs/demo-screenshot.gif" alt="Zava Airlines Demo — Multi-agent orchestration with FoundryIQ Knowledge Bases" width="100%">
+  <video src="https://github.com/nazmohammed/airline-foundryiq-demo/raw/main/docs/demo-screenshot.mp4" controls autoplay muted loop width="100%">
+    Your browser does not support the video tag. <a href="docs/demo-screenshot.mp4">Download the demo video</a>.
+  </video>
 </p>
 
 > **Live test run**: A passenger asks to rebook a London–Dubai flight due to a travel advisory. The orchestrator routes to the **Customer Service** agent (rebooking policy) and the **Operations** agent (geo-political situation with Iran), each grounded by their respective FoundryIQ Knowledge Base with citations.

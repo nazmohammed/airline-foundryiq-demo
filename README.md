@@ -12,6 +12,14 @@ A multi-agent orchestration demo for the airline industry using **Microsoft Agen
 - **Stateless Router / Stateful Specialists**: Router uses `AzureOpenAIChatClient` (stateless) to avoid server-side state contamination; specialists use `AzureAIAgentClient` (stateful, KB-grounded)
 - **Fully Automated Deployment**: Infrastructure as Code with Bicep + setup scripts
 
+## Demo
+
+<p align="center">
+  <img src="docs/demo-screenshot.gif" alt="Zava Airlines Demo — Multi-agent orchestration with FoundryIQ Knowledge Bases" width="100%">
+</p>
+
+> **Live test run**: A passenger asks to rebook a London–Dubai flight due to a travel advisory. The orchestrator routes to the **Customer Service** agent (rebooking policy) and the **Operations** agent (geo-political situation with Iran), each grounded by their respective FoundryIQ Knowledge Base with citations.
+
 ## Architecture
 
 ```

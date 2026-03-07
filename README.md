@@ -22,63 +22,68 @@ A multi-agent orchestration demo for the airline industry using **Microsoft Agen
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           Passenger Query                                     │
-│          "I need to rebook my London-Dubai flight due to a travel advisory"   │
-└─────────────────────────────────┬────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATOR (Router Agent)                                 │
-│                    AzureOpenAIChatClient (stateless)                           │
-│                                                                               │
-│   • Analyzes passenger intent                                                 │
-│   • Routes to: customer_service | operations | loyalty                        │
-│   • Returns grounded response with citations                                  │
-└───────────┬─────────────────────┬─────────────────────┬──────────────────────┘
-            │                     │                     │
-            ▼                     ▼                     ▼
-┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐
-│ CUSTOMER SERVICE  │  │  OPERATIONS       │  │  LOYALTY          │
-│ AGENT             │  │  AGENT            │  │  AGENT            │
-│ AzureAIAgentClient│  │ AzureAIAgentClient│  │ AzureAIAgentClient│
-│                   │  │                   │  │                   │
-│ kb1-customer-     │  │ kb2-operations    │  │ kb3-loyalty       │
-│ service           │  │                   │  │                   │
-│ • Rebooking       │  │ • Flight ops      │  │ • SkyRewards      │
-│ • Refunds         │  │ • Disruptions     │  │ • Miles/Tiers     │
-│ • Baggage         │  │ • Geo-political   │  │ • Lounge access   │
-│ • Complaints      │  │ • Crew mgmt       │  │ • Partner rewards │
-└─────────┬─────────┘  └─────────┬─────────┘  └─────────┬─────────┘
-          │                      │                      │
-          ▼                      ▼                      ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                 AZURE AI FOUNDRY + FOUNDRYIQ                                  │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │                    FOUNDRYIQ KNOWLEDGE BASES                            │  │
-│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐     │  │
-│  │  │ kb1-customer-    │  │ kb2-operations   │  │ kb3-loyalty      │     │  │
-│  │  │ service (gpt-4.1)│  │   (gpt-4.1)     │  │   (gpt-4.1)     │     │  │
-│  │  └────────┬─────────┘  └──────┬───────────┘  └──────┬───────────┘     │  │
-│  │           ▼                   ▼                     ▼                  │  │
-│  │  ┌───────────────────────────────────────────────────────────────┐     │  │
-│  │  │                    KNOWLEDGE SOURCES                           │     │  │
-│  │  │  Customer Svc: ks-cs-aisearch (Azure AI Search)               │     │  │
-│  │  │  Operations:   ks-ops-aisearch, ks-geopolitical-bing (Bing)   │     │  │
-│  │  │  Loyalty:      ks-loyalty-aisearch (Azure AI Search)          │     │  │
-│  │  └───────────────────────────────────────────────────────────────┘     │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                               │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │                    AZURE AI SEARCH INDEXES                              │  │
-│  │  index-customer-service │ index-operations │ index-loyalty              │  │
-│  │  (HNSW vector, 3072 dims, text-embedding-3-large, semantic config)     │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["🖥️ Frontend (React + Vite)"]
+        UI[Chat UI]
+    end
+
+    subgraph Backend["⚙️ FastAPI Backend"]
+        API["POST /chat · GET /health · GET /agents"]
+    end
+
+    subgraph Orchestrator["🧠 Orchestrator"]
+        Router["Router Agent<br/><i>AzureOpenAIChatClient (stateless)</i>"]
+    end
+
+    subgraph Specialists["🎯 Specialist Agents — AzureAIAgentClient (stateful)"]
+        CS["Customer Service<br/>kb1-customer-service"]
+        OPS["Operations<br/>kb2-operations"]
+        LOY["Loyalty<br/>kb3-loyalty"]
+    end
+
+    subgraph FoundryIQ["🔍 FoundryIQ Knowledge Bases (gpt-4.1)"]
+        KB1["kb1-customer-service<br/>ks-cs-aisearch"]
+        KB2["kb2-operations<br/>ks-ops-aisearch · ks-geopolitical-bing"]
+        KB3["kb3-loyalty<br/>ks-loyalty-aisearch"]
+    end
+
+    subgraph Search["📊 Azure AI Search"]
+        IDX["3 Indexes · HNSW vector · 3072 dims<br/>text-embedding-3-large · semantic config"]
+    end
+
+    GPT["🤖 gpt-4.1"]
+    RBAC["🔐 DefaultAzureCredential (RBAC)"]
+
+    UI -->|HTTP| API
+    API --> Router
+    Router -->|route decision| CS
+    Router -->|route decision| OPS
+    Router -->|route decision| LOY
+    CS --> KB1
+    OPS --> KB2
+    LOY --> KB3
+    KB1 --> IDX
+    KB2 --> IDX
+    KB2 -->|real-time| Bing["🌐 Bing Search"]
+    KB3 --> IDX
+    Router --> GPT
+    CS --> GPT
+    OPS --> GPT
+    LOY --> GPT
+    RBAC -.-> Router
+    RBAC -.-> Specialists
+
+    style Router fill:#1E40AF,color:#fff
+    style CS fill:#7C3AED,color:#fff
+    style OPS fill:#DC2626,color:#fff
+    style LOY fill:#D97706,color:#fff
+    style KB1 fill:#059669,color:#fff
+    style KB2 fill:#059669,color:#fff
+    style KB3 fill:#059669,color:#fff
 ```
 
-> 📐 **Detailed Mermaid diagrams** — system architecture, sequence flows, class relationships, RBAC auth, state management, and deployment topology: **[docs/architecture.md](docs/architecture.md)**
+> 📐 **Full diagrams** — sequence flows, class relationships, RBAC auth, state management, data pipeline, and deployment topology: **[docs/architecture.md](docs/architecture.md)**
 
 ---
 

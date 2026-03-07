@@ -78,6 +78,8 @@ A multi-agent orchestration demo for the airline industry using **Microsoft Agen
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> 📐 **Detailed Mermaid diagrams** — system architecture, sequence flows, class relationships, RBAC auth, state management, and deployment topology: **[docs/architecture.md](docs/architecture.md)**
+
 ---
 
 ## Prerequisites

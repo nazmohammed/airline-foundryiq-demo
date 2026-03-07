@@ -24,49 +24,55 @@ A multi-agent orchestration demo for the airline industry using **Microsoft Agen
 
 ```mermaid
 graph TB
-    subgraph Frontend["🖥️ Frontend (React + Vite)"]
-        UI[Chat UI]
+    subgraph Frontend["🖥️ Frontend · React + Vite"]
+        UI["💬 Chat UI"]
     end
 
     subgraph Backend["⚙️ FastAPI Backend"]
         API["POST /chat · GET /health · GET /agents"]
     end
 
-    subgraph Orchestrator["🧠 Orchestrator"]
-        Router["Router Agent<br/><i>AzureOpenAIChatClient (stateless)</i>"]
+    subgraph Orchestrator["🧠 Orchestrator · Router"]
+        Router["Router Agent<br/><i>AzureOpenAIChatClient — stateless</i>"]
     end
 
-    subgraph Specialists["🎯 Specialist Agents — AzureAIAgentClient (stateful)"]
-        CS["Customer Service<br/>kb1-customer-service"]
-        OPS["Operations<br/>kb2-operations"]
-        LOY["Loyalty<br/>kb3-loyalty"]
+    subgraph Specialists["🧪 Azure AI Foundry · Specialist Agents — AzureAIAgentClient (stateful)"]
+        CS["🛎️ Customer Service Agent<br/>kb1-customer-service"]
+        OPS["✈️ Operations Agent<br/>kb2-operations"]
+        LOY["⭐ Loyalty Agent<br/>kb3-loyalty"]
     end
 
-    subgraph FoundryIQ["🔍 FoundryIQ Knowledge Bases (gpt-4.1)"]
-        KB1["kb1-customer-service<br/>ks-cs-aisearch"]
-        KB2["kb2-operations<br/>ks-ops-aisearch · ks-geopolitical-bing"]
-        KB3["kb3-loyalty<br/>ks-loyalty-aisearch"]
+    subgraph FoundryIQ["🔎 FoundryIQ · Knowledge Bases — gpt-4.1 · Agentic Retrieval"]
+        KB1["📘 kb1-customer-service<br/>Knowledge Source: ks-cs-aisearch"]
+        KB2["📗 kb2-operations<br/>Knowledge Sources: ks-ops-aisearch · ks-geopolitical-bing"]
+        KB3["📙 kb3-loyalty<br/>Knowledge Source: ks-loyalty-aisearch"]
     end
 
-    subgraph Search["📊 Azure AI Search"]
-        IDX["3 Indexes · HNSW vector · 3072 dims<br/>text-embedding-3-large · semantic config"]
+    subgraph Search["🔍 Azure AI Search · 3 Indexes"]
+        IDX1["index-customer-service"]
+        IDX2["index-operations"]
+        IDX3["index-loyalty"]
+        EMB["🧬 text-embedding-3-large · 3072 dims<br/>HNSW vector · semantic config"]
     end
 
-    GPT["🤖 gpt-4.1"]
-    RBAC["🔐 DefaultAzureCredential (RBAC)"]
+    GPT["🤖 Azure OpenAI · gpt-4.1"]
+    RBAC["🔐 DefaultAzureCredential · RBAC — no API keys"]
 
-    UI -->|HTTP| API
+    UI -->|HTTP POST /chat| API
     API --> Router
-    Router -->|route decision| CS
-    Router -->|route decision| OPS
-    Router -->|route decision| LOY
+    Router -->|customer_service| CS
+    Router -->|operations| OPS
+    Router -->|loyalty| LOY
     CS --> KB1
     OPS --> KB2
     LOY --> KB3
-    KB1 --> IDX
-    KB2 --> IDX
-    KB2 -->|real-time| Bing["🌐 Bing Search"]
-    KB3 --> IDX
+    KB1 --> IDX1
+    KB2 --> IDX2
+    KB2 -->|real-time intel| Bing["🌐 Bing Search API"]
+    KB3 --> IDX3
+    IDX1 --> EMB
+    IDX2 --> EMB
+    IDX3 --> EMB
     Router --> GPT
     CS --> GPT
     OPS --> GPT
@@ -81,6 +87,10 @@ graph TB
     style KB1 fill:#059669,color:#fff
     style KB2 fill:#059669,color:#fff
     style KB3 fill:#059669,color:#fff
+    style IDX1 fill:#0369A1,color:#fff
+    style IDX2 fill:#0369A1,color:#fff
+    style IDX3 fill:#0369A1,color:#fff
+    style GPT fill:#6D28D9,color:#fff
 ```
 
 > 📐 **Full diagrams** — sequence flows, class relationships, RBAC auth, state management, data pipeline, and deployment topology: **[docs/architecture.md](docs/architecture.md)**
